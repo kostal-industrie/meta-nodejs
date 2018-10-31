@@ -12,6 +12,7 @@ NPM_IGNORE = "${WORKDIR}/.npmignore"
 
 NPM ?= "npm"
 NPM_HOME_DIR = "${TMPDIR}/npm_home/${PF}"
+NPM_CACHE_DIR = "${TMPDIR}/npm_cache/${PF}"
 NPM_ARCH ?= "${@nodejs_map_dest_cpu(d.getVar('TARGET_ARCH', True), d)}"
 NPM_LD ?= "${CXX}"
 NPM_FLAGS ?= ""
@@ -38,26 +39,16 @@ oe_runnpm() {
     echo "/.*/" >> "${NPM_IGNORE}"
 
     mkdir -p "${NPM_HOME_DIR}"
+    mkdir -p "${NPM_CACHE_DIR}"
 
     export NPM_VERSION="$(${NPM} --v)"
-    export NPM_CACHE_CMD="clean"
-
-    if [ "${NPM_CACHE_DIR}" == "" ]; then
-        export NPM_CONFIG_CACHE="${DL_DIR}/npm_v${NPM_VERSION}_${TARGET_ARCH}_cache/${PF}"
-    else
-        export NPM_CONFIG_CACHE=${NPM_CACHE_DIR}
-    fi
-
-    export NPM_CONFIG_DEV="false"
 
     bbnote NPM version: $NPM_VERSION
     bbnote NPM target architecture: ${NPM_ARCH}
     bbnote NPM home directory: ${NPM_HOME_DIR}
-    bbnote NPM cache directory: ${NPM_CONFIG_CACHE}
+    bbnote NPM cache directory: ${NPM_CACHE_DIR}
     bbnote NPM registry: ${NPM_REGISTRY}
     bbnote NPM workdir .npmignore: ${NPM_IGNORE}
-
-    bbnote ${NPM} --registry=${NPM_REGISTRY} ${ARCH_FLAGS} ${NPM_FLAGS} "$@"
 
     export JOBS="${@oe.utils.cpu_count()}"
 
@@ -66,12 +57,18 @@ oe_runnpm() {
     export no_proxy="${no_proxy}"
 
     export HOME="${NPM_HOME_DIR}"
+    export NPM_CONFIG_CACHE="${NPM_CACHE_DIR}"
+    export NPM_CONFIG_DEV="false"
 
+    NPM_CACHE_CMD="clean"
     if [ "$(echo ${NPM_VERSION} | cut -d. -f1)" = "5" ]; then
         NPM_CACHE_CMD="verify"
     fi
 
-    ${NPM} cache $NPM_CACHE_CMD || die "oe_runnpm failed (cache $NPM_CACHE_CMD)"
+    bbnote ${NPM} cache ${NPM_CACHE_CMD}
+    bbnote ${NPM} --registry=${NPM_REGISTRY} ${ARCH_FLAGS} ${NPM_FLAGS} "$@"
+
+    ${NPM} cache ${NPM_CACHE_CMD} || die "oe_runnpm failed (cache $NPM_CACHE_CMD)"
 
     LD="${NPM_LD}" ${NPM} --registry=${NPM_REGISTRY} ${ARCH_FLAGS} ${NPM_FLAGS} "$@" || die "oe_runnpm failed (install)"
 }
