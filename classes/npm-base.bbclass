@@ -61,7 +61,7 @@ oe_runnpm() {
     export NPM_CONFIG_DEV="false"
 
     NPM_CACHE_CMD="clean"
-    if [ "$(echo ${NPM_VERSION} | cut -d. -f1)" = "5" ]; then
+    if [ "$(echo ${NPM_VERSION} | cut -d. -f1)" -ge "5" ]; then
         NPM_CACHE_CMD="verify"
     fi
 
